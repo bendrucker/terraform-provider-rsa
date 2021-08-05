@@ -4,13 +4,16 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha1"
 	"crypto/sha256"
 	"crypto/sha512"
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"hash"
+	"strings"
 
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -20,7 +23,9 @@ import (
 
 func resourceCiphertext() *schema.Resource {
 	return &schema.Resource{
+		ReadContext:   nilCrudFunc,
 		CreateContext: resourceCiphertextCreate,
+		DeleteContext: nilCrudFunc,
 		Schema: map[string]*schema.Schema{
 			"plaintext": {
 				Description: "The plaintext to encrypt",
@@ -41,6 +46,7 @@ func resourceCiphertext() *schema.Resource {
 				Description:      "The padding mode to use",
 				Type:             schema.TypeString,
 				Optional:         true,
+				ForceNew:         true,
 				Default:          "PKCS1.5",
 				ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"PKCS1.5", "OAEP"}, true)),
 			},
@@ -49,6 +55,7 @@ func resourceCiphertext() *schema.Resource {
 				Description:      "The hash algorithm to use, for OAEP only",
 				Type:             schema.TypeString,
 				Optional:         true,
+				ForceNew:         true,
 				Default:          "SHA256",
 				ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"SHA256", "SHA512"}, true)),
 			},
@@ -68,14 +75,13 @@ func resourceCiphertextCreate(_ context.Context, d *schema.ResourceData, meta in
 	padding := d.Get("padding").(string)
 	hashName := d.Get("hash").(string)
 
+	// block is already validated as RSA in PEM
 	block, _ := pem.Decode([]byte(publicKey))
-
-	key, err := x509.ParsePKCS1PublicKey(block.Bytes)
-	if err != nil {
-		return diag.Errorf("failed to parse public key: %v", err)
-	}
+	i, _ := x509.ParsePKIXPublicKey(block.Bytes)
+	key := i.(*rsa.PublicKey)
 
 	var b []byte
+	var err error
 
 	switch padding {
 	case "PKCS1.5":
@@ -91,7 +97,14 @@ func resourceCiphertextCreate(_ context.Context, d *schema.ResourceData, meta in
 		}
 	}
 
-	d.Set("ciphertext", base64.StdEncoding.EncodeToString(b))
+	ciphertext := base64.StdEncoding.EncodeToString(b)
+	d.Set("ciphertext", ciphertext)
+	d.SetId(hashForState(ciphertext))
+
+	return nil
+}
+
+func nilCrudFunc(_ context.Context, _ *schema.ResourceData, _ interface{}) diag.Diagnostics {
 	return nil
 }
 
@@ -121,15 +134,33 @@ func validatePublicKey(v interface{}, path cty.Path) (diags diag.Diagnostics) {
 		return diags
 	}
 
-	_, err := x509.ParsePKCS1PublicKey(block.Bytes)
+	key, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
 		diags = append(diags, diag.Diagnostic{
 			Severity:      diag.Error,
 			Summary:       "Invalid public key",
-			Detail:        fmt.Sprintf("The public key must be in PEM format and be a valid RSA public key. Error: %v", err),
+			Detail:        fmt.Sprintf("The public key must be in PEM format. Error: %v", err),
+			AttributePath: path,
+		})
+	}
+
+	_, ok := key.(*rsa.PublicKey)
+	if !ok {
+		diags = append(diags, diag.Diagnostic{
+			Severity:      diag.Error,
+			Summary:       "Invalid public key",
+			Detail:        "The public key must be in PEM format and be an RSA public key.",
 			AttributePath: path,
 		})
 	}
 
 	return diags
+}
+
+func hashForState(value string) string {
+	if value == "" {
+		return ""
+	}
+	hash := sha1.Sum([]byte(strings.TrimSpace(value)))
+	return hex.EncodeToString(hash[:])
 }
