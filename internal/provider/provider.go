@@ -11,7 +11,9 @@ func init() {
 func New(version string) func() *schema.Provider {
 	return func() *schema.Provider {
 		return &schema.Provider{
-			DataSourcesMap: map[string]*schema.Resource{},
+			ResourcesMap: map[string]*schema.Resource{
+				"rsa_ciphertext": resourceCiphertext(),
+			},
 		}
 	}
 }
