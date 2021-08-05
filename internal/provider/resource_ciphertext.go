@@ -21,8 +21,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
 )
 
+const resourceCiphertextDescription = `
+Encrypts plain text using an RSA public key with support for PKCS1.5 and OAEP.
+Since RSA encryption includes random padding, passing the same input text to multiple
+resources will result in different ciphertext each time.
+`
+
 func resourceCiphertext() *schema.Resource {
 	return &schema.Resource{
+		Description:   strings.TrimSpace(strings.ReplaceAll(resourceCiphertextDescription, "\n", " ")),
 		ReadContext:   nilCrudFunc,
 		CreateContext: resourceCiphertextCreate,
 		DeleteContext: nilCrudFunc,

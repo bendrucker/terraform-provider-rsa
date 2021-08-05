@@ -3,12 +3,12 @@
 page_title: "rsa_ciphertext Resource - terraform-provider-rsa"
 subcategory: ""
 description: |-
-  
+  Encrypts plain text using an RSA public key with support for PKCS1.5 and OAEP. Since RSA encryption includes random padding, passing the same input text to multiple resources will result in different ciphertext each time.
 ---
 
 # rsa_ciphertext (Resource)
 
-
+Encrypts plain text using an RSA public key with support for PKCS1.5 and OAEP. Since RSA encryption includes random padding, passing the same input text to multiple resources will result in different ciphertext each time.
 
 ## Example Usage
 
