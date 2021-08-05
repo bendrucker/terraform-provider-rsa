@@ -126,7 +126,7 @@ func validatePublicKey(v interface{}, path cty.Path) (diags diag.Diagnostics) {
 		diags = append(diags, diag.Diagnostic{
 			Severity:      diag.Error,
 			Summary:       "Invalid public key",
-			Detail:        fmt.Errof("The public key must be in PEM format and be a valid RSA public key. Error: %v", err),
+			Detail:        fmt.Sprintf("The public key must be in PEM format and be a valid RSA public key. Error: %v", err),
 			AttributePath: path,
 		})
 	}
