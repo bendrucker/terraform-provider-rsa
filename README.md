@@ -31,3 +31,7 @@ output "ciphertext" {
   value = rsa_ciphertext.example.ciphertext
 }
 ```
+
+## Terraform Core
+
+Terraform includes an [`rsadecrypt`](https://www.terraform.io/docs/language/functions/rsadecrypt.html) function, so why not `rsaencrypt`? RSA implementations [use randomized padding](https://en.wikipedia.org/wiki/RSA_(cryptosystem)#Padding_schemes) which results in non-deterministic output. For a given plaintext, encrypting will result in different ciphertext each time. Terraform functions are stateless and should generally be idempotent to avoid perpetual diffs. Implementing a resource provides the necessary state tracking to ensure that the ciphertext is only re-computed when the plaintext or other encryption attributes have changed.
