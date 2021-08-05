@@ -46,11 +46,11 @@ func resourceCiphertext() *schema.Resource {
 			},
 
 			"hash": {
-				Description:  "The hash algorithm to use, for OAEP only",
-				Type:         schema.TypeString,
-				Optional:     true,
-				Default:      "SHA256",
-				ValidateFunc: validation.StringInSlice([]string{"SHA256", "SHA512"}, true),
+				Description:      "The hash algorithm to use, for OAEP only",
+				Type:             schema.TypeString,
+				Optional:         true,
+				Default:          "SHA256",
+				ValidateDiagFunc: validation.ToDiagFunc(validation.StringInSlice([]string{"SHA256", "SHA512"}, true)),
 			},
 
 			"ciphertext": {
